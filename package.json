@@ -1,0 +1,113 @@
+{
+  "name": "vscode-git-commit-message-generator",
+  "displayName": "Git Commit Message Generator",
+  "description": "根据staged files的代码变更自动生成commit message",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:vscode-git-commit-message-generator.generateCommitMessage"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vscode-git-commit-message-generator.generateCommitMessage",
+        "title": "生成 Commit Message",
+        "icon": {
+          "dark": "media/commit-message-generator-dark.svg",
+          "light": "media/commit-message-generator-light.svg"
+        }
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "when": "scmProvider == git",
+          "command": "vscode-git-commit-message-generator.generateCommitMessage",
+          "group": "navigation",
+          "order": 1
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Commit Message Generator",
+      "properties": {
+        "vscode-git-commit-message-generator.llm.url": {
+          "type": "string",
+          "default": "http://ollama.e.weibo.com",
+          "description": "LLM API的URL地址。支持Ollama和阿里云百炼"
+        },
+        "vscode-git-commit-message-generator.llm.model": {
+          "type": "string",
+          "default": "qwen2.5:32b",
+          "description": "LLM模型类型"
+        },
+        "vscode-git-commit-message-generator.llm.prompt": {
+          "type": "string",
+          "default": "根据以下Git变更生成提交信息，格式为<type>: <description>：\n文件：${files}\n变更：${diff}",
+          "description": "生成提交信息的提示词模板，支持${files}和${diff}变量"
+        },
+        "vscode-git-commit-message-generator.llm.system": {
+          "type": "string",
+          "default": "请用一句话描述这次代码变更的主要内容，格式为<type>: <description>",
+          "description": "生成提交信息的系统指令"
+        },
+        "vscode-git-commit-message-generator.llm.temperature": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "LLM生成结果的温度参数，值越高生成结果越随机"
+        },
+        "vscode-git-commit-message-generator.llm.top_p": {
+          "type": "number",
+          "default": 0.9,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "LLM生成结果的top_p参数，控制采样时的累积概率阈值"
+        },
+        "vscode-git-commit-message-generator.llm.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "LLM API的密钥，用于API认证"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "@types/glob": "^7.1.3",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "14.x",
+    "eslint": "^7.27.0",
+    "glob": "^7.1.7",
+    "mocha": "^8.4.0",
+    "typescript": "^4.3.2",
+    "vscode-test": "^1.5.2",
+    "ts-loader": "^9.2.2",
+    "webpack": "^5.38.1",
+    "webpack-cli": "^4.7.0",
+    "@typescript-eslint/eslint-plugin": "^4.26.0",
+    "@typescript-eslint/parser": "^4.26.0"
+  },
+  "dependencies": {
+    "simple-git": "^3.5.0"
+  }
+}
