@@ -84,26 +84,34 @@ export function activate(context: vscode.ExtensionContext) {
 async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<string> {
   const modelServices = [
     {
-      name: 'Ollama',
+      name: 'ollama',
       hostname: 'ollama.e.weibo.com',
       apiSuffix: '/api/generate',
-      responseTemplate: {
-        response: '${response}'
-      }
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      apiKey: ''
     },
     {
-      name: 'Aliyun',
+      name: 'aliyun',
       hostname: 'dashscope.aliyuncs.com',
       apiSuffix: '/chat/completions',
-      responseTemplate: {
-        choices: [
-          {
-            message: {
-              content: '${response}'
-            }
-          }
-        ]
-      }
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '
+      },
+      apiKey: 'Authorization'
+    },
+    {
+      name: 'anthropic',
+      hostname: 'api.anthropic.com',
+      apiSuffix: '/v1/messages',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': '',
+        'anthropic-version': '2023-06-01'
+      },
+      apiKey: 'x-api-key'
     }
   ];
   // 获取配置
@@ -164,6 +172,21 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         stream: false
       };
       break;
+    case "anthropic":
+      requestData = {
+        model: model,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        system: system,
+        max_tokens: 1024,
+        temperature: temperature,
+        stream: false
+      };
+      break;
   }
   
   console.log('requestData:', requestData);
@@ -182,6 +205,13 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
       ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
     }
   };
+  options.headers = serviceConfig.headers;
+  if (serviceConfig.apiKey && typeof serviceConfig.apiKey === 'string' && options.headers[serviceConfig.apiKey as keyof typeof options.headers]) {
+    const key = serviceConfig.apiKey as keyof typeof options.headers;
+    if (options.headers[key]) {
+      options.headers[key] = options.headers[key] + apiKey;
+    }
+  }
   let optionsStr = JSON.stringify(options);
   vscode.window.showErrorMessage(`调用LLM API请求: ${optionsStr}`+'\n');
 
@@ -210,6 +240,9 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
                 break;
               case "ollama":
                 generatedText = response.response || '';
+                break;
+              case "anthropic":
+                generatedText = response.content[0]?.text || '';
                 break;
             }
             resolve(generatedText.trim());
