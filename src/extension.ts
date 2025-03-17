@@ -112,6 +112,16 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         'anthropic-version': '2023-06-01'
       },
       apiKey: 'x-api-key'
+    },
+    {
+      name: 'tencent',
+      hostname: 'hunyuan.cloud.tencent.com',
+      apiSuffix: '/hyllm/v1/chat/completions',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '
+      },
+      apiKey: 'Authorization'
     }
   ];
   // 获取配置
@@ -187,9 +197,27 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         stream: false
       };
       break;
+    case "tencent":
+      requestData = {
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: system
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: temperature,
+        top_p: topP,
+        stream: false
+      };
+      break;
   }
   
-  console.log('requestData:', requestData);
+  console.log('[Committer] requestData:', requestData);
 
   // 获取API密钥
   const apiKey = config.get<string>('apiKey') || '';
@@ -212,7 +240,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
     }
   }
   let optionsStr = JSON.stringify(options);
-  vscode.window.showErrorMessage(`调用LLM API请求: ${optionsStr}`+'\n');
+  console.log(`[Committer]调用LLM API请求: ${optionsStr}`+'\n');
 
   return new Promise((resolve, reject) => {
     // 选择http或https模块
@@ -228,7 +256,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
       res.on('end', () => {
         try {
           // 预处理响应数据，移除或转义非法的控制字符
-          console.log('原始响应数据:', data);
+          console.log('[Committer] 原始响应数据:', data);
           
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             const response = JSON.parse(data);
@@ -242,6 +270,9 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
                 break;
               case "anthropic":
                 generatedText = response.content[0]?.text || '';
+                break;
+              case "tencent":
+                generatedText = response.choices[0]?.messages[0]?.content || '';
                 break;
             }
             resolve(generatedText.trim());
