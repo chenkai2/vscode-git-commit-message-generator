@@ -201,14 +201,13 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
     path: path,
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
+      'Content-Type': 'application/json'
     }
   };
   options.headers = serviceConfig.headers;
   if (serviceConfig.apiKey && typeof serviceConfig.apiKey === 'string' && options.headers[serviceConfig.apiKey as keyof typeof options.headers]) {
     const key = serviceConfig.apiKey as keyof typeof options.headers;
-    if (options.headers[key]) {
+    if (options.headers[key] && apiKey) {
       options.headers[key] = options.headers[key] + apiKey;
     }
   }
