@@ -132,6 +132,16 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         'Authorization': 'Bearer '
       },
       apiKey: 'Authorization'
+    },
+    {
+      name: 'siliconflow',
+      hostname: 'api.siliconflow.cn',
+      apiSuffix: '/v1/chat/completions',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '
+      },
+      apiKey: 'Authorization'
     }
   ];
   // 获取配置
@@ -243,6 +253,24 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         stream: false
       };
       break;
+    case "siliconflow":
+      requestData = {
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: system
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: temperature,
+        top_p: topP,
+        stream: false
+      };
+      break;
   }
   
   console.log('[Committer] requestData:', requestData);
@@ -303,6 +331,9 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
                 generatedText = response.choices[0]?.messages[0]?.content || '';
                 break;
               case "deepseek":
+                generatedText = response.choices[0]?.message?.content || '';
+                break;
+              case "siliconflow":
                 generatedText = response.choices[0]?.message?.content || '';
                 break;
             }
