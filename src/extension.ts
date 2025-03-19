@@ -226,7 +226,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
             content: prompt
           }
         ],
-        stream: false
+        stream: true
       };
       break;
     case "anthropic":
@@ -241,7 +241,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         system: system,
         max_tokens: 1024,
         temperature: temperature,
-        stream: false
+        stream: true
       };
       break;
     case "tencent":
@@ -260,7 +260,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         temperature: temperature,
         enable_enhancement: false,
         top_p: topP,
-        stream: false
+        stream: true
       };
       break;
     case "deepseek":
@@ -278,7 +278,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         ],
         temperature: temperature,
         top_p: topP,
-        stream: false
+        stream: true
       };
       break;
     case "siliconflow":
@@ -296,7 +296,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         ],
         temperature: temperature,
         top_p: topP,
-        stream: false
+        stream: true
       };
       break;
       case "openai":
@@ -314,7 +314,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           ],
           temperature: temperature,
           top_p: topP,
-          stream: false
+          stream: true
         };
         break;
       case "ollama":
@@ -324,7 +324,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           prompt: prompt,
           temperature: temperature,
           top_p: topP,
-          stream: false
+          stream: true
         };
         break;
   }
@@ -361,44 +361,65 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
     const req = requester.request(options, (res) => {
       let data = '';
       
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
+      let generatedText = '';
       
-      res.on('end', () => {
-        try {
-          // 预处理响应数据，移除或转义非法的控制字符
-          console.log('[Committer] 原始响应数据:', data);
-          
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            const response = JSON.parse(data);
-            let generatedText = '';
+      res.on('data', (chunk) => {
+        const lines = chunk.toString().split('\n').filter((line: string) => line.trim());
+        
+        for (const line of lines) {
+          try {
+            if (line === '[DONE]') {
+              resolve(generatedText.trim());
+              return;
+            }
+            
+            // 去除JSON字符串前的所有字符，只保留从{开始的部分
+            const jsonStartIndex = line.indexOf('{');
+            if (jsonStartIndex === -1) {
+              continue;
+            }
+            const jsonStr = line.substring(jsonStartIndex);
+            const response = JSON.parse(jsonStr);
+            
             if (!serviceConfig) {
               throw new Error('未找到匹配的LLM服务配置');
             }
+            
             switch (serviceConfig.protocol) {
               case "openai":
-                generatedText = response.choices[0]?.message?.content || '';
+                if (response.choices && response.choices[0]?.delta?.content) {
+                  generatedText += response.choices[0].delta.content;
+                }
                 break;
               case "anthropic":
-                generatedText = response.content[0]?.text || '';
+                if (response.type === 'content_block_delta' && response.delta?.text) {
+                  generatedText += response.delta.text;
+                }
                 break;
               case "openrouter":
-                generatedText = response.completion || '';
+                if (response.completion) {
+                  generatedText += response.completion;
+                }
                 break;
               case "ollama":
               default:
-                generatedText = response.response || '';
+                if (response.response) {
+                  generatedText += response.response;
+                }
                 break;
             }
-            resolve(generatedText.trim());
-          } else {
-            reject(new Error(`API请求失败，状态码: ${res.statusCode}, 响应: ${data}`));
+          } catch (error) {
+            // 如果解析JSON失败，可能是因为接收到了不完整的数据块
+            console.log('解析数据块失败，跳过:', error);
           }
-        } catch (error) {
-          console.error('解析API响应失败，原始数据:', data);
-          console.error('解析错误详情:', error);
-          reject(new Error(`解析API响应失败: ${error}，请检查控制台日志获取详细信息`));
+        }
+      });
+      
+      res.on('end', () => {
+        if (generatedText) {
+          resolve(generatedText.trim());
+        } else {
+          reject(new Error('未收到有效的响应数据'));
         }
       });
     });
