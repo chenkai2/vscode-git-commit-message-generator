@@ -85,72 +85,93 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
   const modelServices = [
     {
       name: 'ollama',
-      hostname: 'ollama.e.weibo.com',
+      // @doc https://github.com/ollama/ollama/blob/main/docs/api.md#chat
+      protocol: 'ollama',
+      hostname: 'localhost',
       apiSuffix: '/api/generate',
       headers: {
         'Content-Type': 'application/json'
-      },
-      apiKey: ''
+      }
     },
     {
-      name: 'aliyun',
-      hostname: 'dashscope.aliyuncs.com',
+      name: 'openai',
+      // @doc https://platform.openai.com/docs/api-reference/completions/create
+      hostname: 'api.openai.com',
+      protocol: 'openai',
       apiSuffix: '/chat/completions',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer '
       },
-      apiKey: 'Authorization'
+      AuthKey: 'Authorization'
+    },
+    {
+      name: 'aliyun',
+      // @doc https://bailian.console.aliyun.com/#/model-market/detail/qwen2.5-32b-instruct?tabKey=sdk
+      hostname: 'dashscope.aliyuncs.com',
+      protocol: 'openai',
+      apiSuffix: '/chat/completions',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '
+      },
+      AuthKey: 'Authorization'
     },
     {
       name: 'anthropic',
+      // @doc https://docs.anthropic.com/en/api/getting-started
       hostname: 'api.anthropic.com',
-      apiSuffix: '/v1/messages',
+      protocol: 'anthropic',
+      apiSuffix: '/messages',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': '',
         'anthropic-version': '2023-06-01'
       },
-      apiKey: 'x-api-key'
+      AuthKey: 'x-api-key'
     },
     {
       name: 'tencent',
-      hostname: 'hunyuan.cloud.tencent.com',
-      apiSuffix: '/hyllm/v1/chat/completions',
+      //@doc https://cloud.tencent.com/document/product/1729/111007
+      hostname: 'api.hunyuan.cloud.tencent.com',
+      protocol: 'openai',
+      apiSuffix: '/chat/completions',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer '
       },
-      apiKey: 'Authorization'
+      AuthKey: 'Authorization'
     },
     {
       name: 'deepseek',
       hostname: 'api.deepseek.com',
-      apiSuffix: '/v1/chat/completions',
+      apiSuffix: '/chat/completions',
+      protocol: 'openai',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer '
       },
-      apiKey: 'Authorization'
+      AuthKey: 'Authorization'
     },
     {
       name: 'siliconflow',
       hostname: 'api.siliconflow.cn',
-      apiSuffix: '/v1/chat/completions',
+      protocol: 'openai',
+      apiSuffix: '/chat/completions',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer '
       },
-      apiKey: 'Authorization'
+      AuthKey: 'Authorization'
     }
   ];
   // 获取配置
   const config = vscode.workspace.getConfiguration('vscode-git-commit-message-generator.llm');
   const apiUrl = config.get<string>('url') || 'http://ollama.e.weibo.com';
-  const model = config.get<string>('model') || 'qwen2.5:32b';
+  const model = config.get<string>('model') || 'QwQ-32B-AWQ';
   const temperature = config.get<number>('temperature') || 0.7;
   const topP = config.get<number>('topP') || 1;
-
+  const protocol = config.get<string>('protocol') || 'ollama';
 
   // 从配置中获取提示词模板和系统指令
   const promptTemplate = config.get<string>('prompt') || `请根据以下Git变更生成一句话提交信息，格式为<type>: <description>：\${diff}`;
@@ -168,7 +189,23 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
   const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (isHttps ? 443 : 80);
 
   // 获取匹配的服务配置
-  const serviceConfig = modelServices.find(service => service.hostname === hostname);
+  let serviceConfig = modelServices.find(service => service.hostname === hostname);
+  if (!serviceConfig) {
+    let serviceName = '';
+    switch (protocol) {
+      case 'openai':
+        serviceName = 'openai';
+        break;
+      case 'anthropic':
+        serviceName = 'anthropic';
+        break;
+      case 'ollama':
+      default:
+        serviceName = 'ollama';
+        break;
+    }
+    serviceConfig = modelServices.find(service => service.name === serviceName);
+  }
   if (!serviceConfig) {
     throw new Error(`未找到匹配的LLM服务配置: ${hostname}`);
   }
@@ -189,16 +226,6 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
             content: prompt
           }
         ],
-        stream: false
-      };
-      break;
-    case "ollama":
-      requestData = {
-        model: model,
-        system: system,
-        prompt: prompt,
-        temperature: temperature,
-        top_p: topP,
         stream: false
       };
       break;
@@ -231,6 +258,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           }
         ],
         temperature: temperature,
+        enable_enhancement: false,
         top_p: topP,
         stream: false
       };
@@ -271,6 +299,34 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         stream: false
       };
       break;
+      case "openai":
+        requestData = {
+          model: model,
+          messages: [
+            {
+              role: 'system',
+              content: system
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: temperature,
+          top_p: topP,
+          stream: false
+        };
+        break;
+      case "ollama":
+        requestData = {
+          model: model,
+          system: system,
+          prompt: prompt,
+          temperature: temperature,
+          top_p: topP,
+          stream: false
+        };
+        break;
   }
   
   console.log('[Committer] requestData:', requestData);
@@ -289,10 +345,10 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
     }
   };
   options.headers = serviceConfig.headers;
-  if (serviceConfig.apiKey && typeof serviceConfig.apiKey === 'string' && options.headers[serviceConfig.apiKey as keyof typeof options.headers]) {
-    const key = serviceConfig.apiKey as keyof typeof options.headers;
-    if (options.headers[key] && apiKey) {
-      options.headers[key] = options.headers[key] + apiKey;
+  if (apiKey && serviceConfig.AuthKey && typeof serviceConfig.AuthKey === 'string' && options.headers[serviceConfig.AuthKey as keyof typeof options.headers]) {
+    const authKey = serviceConfig.AuthKey as keyof typeof options.headers;
+    if (options.headers[authKey]) {
+      options.headers[authKey] = options.headers[authKey] + apiKey;
     }
   }
   let optionsStr = JSON.stringify(options);
@@ -317,24 +373,22 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             const response = JSON.parse(data);
             let generatedText = '';
-            switch (serviceConfig.name.toLowerCase()) {
-              case "aliyun":
+            if (!serviceConfig) {
+              throw new Error('未找到匹配的LLM服务配置');
+            }
+            switch (serviceConfig.protocol) {
+              case "openai":
                 generatedText = response.choices[0]?.message?.content || '';
-                break;
-              case "ollama":
-                generatedText = response.response || '';
                 break;
               case "anthropic":
                 generatedText = response.content[0]?.text || '';
                 break;
-              case "tencent":
-                generatedText = response.choices[0]?.messages[0]?.content || '';
+              case "openrouter":
+                generatedText = response.completion || '';
                 break;
-              case "deepseek":
-                generatedText = response.choices[0]?.message?.content || '';
-                break;
-              case "siliconflow":
-                generatedText = response.choices[0]?.message?.content || '';
+              case "ollama":
+              default:
+                generatedText = response.response || '';
                 break;
             }
             resolve(generatedText.trim());
