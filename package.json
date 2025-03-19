@@ -40,7 +40,7 @@
       "properties": {
         "vscode-git-commit-message-generator.llm.url": {
           "type": "string",
-          "default": "http://ollama.e.weibo.com",
+          "default": "http://ollama.e.weibo.com/qwen",
           "description": "LLM API的URL地址。支持Ollama和阿里云百炼"
         },
         "vscode-git-commit-message-generator.llm.model": {
@@ -76,6 +76,11 @@
           "type": "string",
           "default": "",
           "description": "LLM API的密钥，用于API认证"
+        },
+        "vscode-git-commit-message-generator.llm.protocol": {
+          "type": "string",
+          "default": "ollama",
+          "description": "LLM API认证的协议，支持 ollama 和 openai"
         }
       }
     }
