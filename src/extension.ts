@@ -206,15 +206,12 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
   if (!serviceConfig) {
     let serviceName = '';
     switch (protocol) {
-      case 'openai':
-        serviceName = 'openai';
-        break;
-      case 'anthropic':
-        serviceName = 'anthropic';
-        break;
       case 'ollama':
-      default:
         serviceName = 'ollama';
+        break;
+      case 'openai':
+      default:
+        serviceName = 'openai';
         break;
     }
     serviceConfig = modelServices.find(service => service.name === serviceName);
@@ -448,44 +445,6 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
                   }
                 }
                 break;
-              case "anthropic":
-                if (response.type === 'content_block_delta') {
-                  if (response.delta?.text) {
-                    let content = response.delta.text;
-                    if (generatedText === '') {
-                      content = content.replace(/^\n+/, '');
-                    }
-                    generatedText += content;
-                    inputBox.value = generatedText;
-                  }
-                  if (response.delta?.reasoning) {
-                    if (generatedThinking.length > 30) {
-                      generatedThinking = '';
-                    }
-                    generatedThinking += response.delta.reasoning;
-                    statusBarMessage.text = generatedThinking;
-                    statusBarMessage.show();
-                  }
-                }
-                break;
-              case "openrouter":
-                if (response.completion) {
-                  let content = response.completion;
-                  if (generatedText === '') {
-                    content = content.replace(/^\n+/, '');
-                  }
-                  generatedText += content;
-                  inputBox.value = generatedText;
-                }
-                if (response.reasoning) {
-                  if (generatedThinking.length > 30) {
-                    generatedThinking = '';
-                  }
-                  generatedThinking += response.reasoning;
-                  statusBarMessage.text = generatedThinking;
-                  statusBarMessage.show();
-                }
-                break;
               case "ollama":
               default:
                 if (response.response) {
@@ -532,7 +491,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
       
       res.on('end', () => {
         if (generatedText) {
-          resolve(generatedText.replace(/^```[a-zA-Z0-9]+\n$/g, '').replace(/\n```/g,''));
+          resolve(generatedText.trim().replace(/^```[a-zA-Z0-9]*\n$/g, '').replace(/\n```/g,''));
         } else {
           reject(new Error('未收到有效的响应数据'));
         }
