@@ -59,12 +59,12 @@
       "properties": {
         "vscode-git-commit-message-generator.llm.url": {
           "type": "string",
-          "default": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+          "default": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
           "description": "LLM API的URL地址。支持Ollama和阿里云百炼"
         },
         "vscode-git-commit-message-generator.llm.model": {
           "type": "string",
-          "default": "deepseek-r1-250120",
+          "default": "deepseek-v3",
           "description": "LLM模型类型"
         },
         "vscode-git-commit-message-generator.llm.prompt": {

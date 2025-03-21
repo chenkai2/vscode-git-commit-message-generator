@@ -17,9 +17,30 @@
 
 ## 使用方法
 
+1. 在设置中配置AI服务的API相关信息。
+  - 默认使用阿里云百炼的AI接口，模型为`deepseek-v3`
+    - 获取API密钥：[阿里云百炼](https://bailian.console.aliyun.com/?apiKey=1#/api-key)
+    - 生成密钥后，可以直接使用各种模型，新用户半年内每种模型免费 100w tokens，可以用的模型有：
+      - `deepseek-v3`
+      - `deepseek-r1`
+      - `qwen2.5-32b-instruct`
+      - `deepseek-r1-distill-qwen-32b`
+      - `qwen-plus`
+      - `deepseek-r1-distill-llama-70b` 这个模型 free，只是用的人太多有点慢
+      - `qwen2-7b-instruct`
+  - 其次推荐[火山引擎](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D)，截止2025年5月31日，每天每个模型免费 50w tokens
+    - 生成api后需要手动开通需要开通的模型。
+    - 支持的模型较少，只有deepseek系的和doubao系的，比如：
+    - `deepseek-r1-250120` 每天50w tokens
+    - `deepseek-r1-distill-qwen-32b-250120` 每天50w tokens
+    - `deepseek-v3-241226` 一共100w tokens
+    - `doubao-1-5-pro-256k-250115` 每天50w tokens
+  - 支持其他兼容openai接口的 大模型服务，比如腾讯元宝、 Anthropic 、硅基流动、DeepSeek等。
+  - 本扩展支持本地部署的ollama，只需要把 protocol 改为 ollama ， url 改为`http://localhost:11434/api/generate`即可。
 1. 在Git源代码管理视图中，将要提交的文件添加到暂存区
-2. 点击工具栏中的"生成Commit Message"按钮
-3. 插件会自动分析暂存的代码变更，并生成规范的提交信息
+2. 点击工具栏中的"生成 Commit Message"按钮
+3. 插件会自动分析暂存的代码变更，并生成规范的提交信息。
+4. DeepSeek等有推理过程的大模型，会在状态栏显示推理过程。
 
 ## 配置选项
 
