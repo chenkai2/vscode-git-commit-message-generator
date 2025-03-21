@@ -28,6 +28,7 @@
     "SCM Providers",
     "Other"
   ],
+  "icon": "media/panda-avatar.png",
   "activationEvents": [
     "onCommand:vscode-git-commit-message-generator.generateCommitMessage"
   ],

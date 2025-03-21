@@ -1,0 +1,30 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="64" cy="76.8" r="64" fill="white" transform="translate(0, -12.8)"/>
+  
+  <!-- 耳朵 -->
+  <ellipse cx="25" cy="12" rx="20" ry="25" fill="black" transform="translate(-12.8, 6.4) rotate(15, 25, 32)"/>
+  <ellipse cx="103" cy="12" rx="20" ry="25" fill="black" transform="translate(12.8, 6.4) rotate(-15, 103, 32)"/>
+  
+  <!-- 眼睛周围的黑色区域 -->
+  <ellipse cx="36" cy="78.8" rx="22" ry="18" fill="black" transform="translate(0, -12.8) rotate(-40, 36, 78.8)"/>
+  <ellipse cx="92" cy="78.8" rx="22" ry="18" fill="black" transform="translate(0, -12.8) rotate(40, 92, 78.8)"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="36" cy="80.8" r="8" fill="white" transform="translate(0, -12.8)"/>
+  <circle cx="92" cy="80.8" r="8" fill="white" transform="translate(0, -12.8)"/>
+  
+  <!-- 眼睛高光 -->
+  <circle cx="34" cy="78.8" r="3" fill="white" transform="translate(0, -12.8)"/>
+  <circle cx="90" cy="78.8" r="3" fill="white" transform="translate(0, -12.8)"/>
+  
+  <!-- 腮红 -->
+  <circle cx="35" cy="102.8" r="8" fill="#ffb3b3" opacity="0.6" transform="translate(0, -12.8)"/>
+  <circle cx="93" cy="102.8" r="8" fill="#ffb3b3" opacity="0.6" transform="translate(0, -12.8)"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="64" cy="108.8" rx="10" ry="7" fill="black" transform="translate(0, -12.8)"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 54 118.8 Q 64 124.8 74 118.8" stroke="black" stroke-width="2.5" fill="none" transform="translate(0, -12.8)"/>
+</svg>

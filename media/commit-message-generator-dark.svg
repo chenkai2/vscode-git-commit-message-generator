@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="8" cy="8" r="7.5" fill="none" stroke="#424242" stroke-width="1"/>
-  <path d="M8 0.5A7.5 7.5 0 1 1 8 15.5A7.5 7.5 0 0 0 8 0.5Z" fill="#424242" stroke="#424242" stroke-width="0.3"/>
-  <path d="M8 0.5A7.5 7.5 0 0 0 8 15.5A7.5 7.5 0 1 1 8 0.5Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.3"/>
-  <circle cx="8" cy="4" r="1.5" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.3"/>
-  <circle cx="8" cy="12" r="1.5" fill="#424242" stroke="#424242" stroke-width="0.3"/>
+  <!-- 头部轮廓 -->
+  <circle cx="8" cy="8" r="7" fill="none" stroke="#E0E0E0" stroke-width="1"/>
+  
+  <!-- 耳朵 -->
+  <ellipse cx="4" cy="4" rx="2.5" ry="3" fill="#E0E0E0" transform="rotate(-15, 4, 4)"/>
+  <ellipse cx="12" cy="4" rx="2.5" ry="3" fill="#E0E0E0" transform="rotate(15, 12, 4)"/>
+  
+  <!-- 眼睛区域 -->
+  <ellipse cx="5.5" cy="8" rx="2.5" ry="2" fill="#E0E0E0" transform="rotate(-20, 5.5, 8)"/>
+  <ellipse cx="10.5" cy="8" rx="2.5" ry="2" fill="#E0E0E0" transform="rotate(20, 10.5, 8)"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="5.5" cy="8" r="1" fill="#1E1E1E"/>
+  <circle cx="10.5" cy="8" r="1" fill="#1E1E1E"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="8" cy="10" rx="1.2" ry="0.8" fill="#E0E0E0"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 6.5 11 Q 8 12 9.5 11" stroke="#E0E0E0" stroke-width="0.5" fill="none"/>
 </svg>
