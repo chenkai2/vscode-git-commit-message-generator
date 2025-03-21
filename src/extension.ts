@@ -491,7 +491,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
       
       res.on('end', () => {
         if (generatedText) {
-          resolve(generatedText.trim().replace(/^```[a-zA-Z0-9]*\n$/g, '').replace(/\n```/g,''));
+          resolve(generatedText.trim().replace(/^```[a-zA-Z0-9]*\n|```/g, ''));
         } else {
           reject(new Error('未收到有效的响应数据'));
         }
