@@ -4,21 +4,38 @@ import * as https from 'https';
 import * as http from 'http';
 import * as url from 'url';
 import { log } from 'console';
+import { match } from 'assert';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('插件 "vscode-git-commit-message-generator" 已激活');
 
   // 注册命令
-  let disposable = vscode.commands.registerCommand('vscode-git-commit-message-generator.generateCommitMessage', async () => {
+  let disposable = vscode.commands.registerCommand('vscode-git-commit-message-generator.generateCommitMessage', async (sourceControl) => {
     try {
-      // 获取当前工作区
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage('没有打开的工作区');
+      // 获取Git扩展
+      const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
+      if (!gitExtension) {
+        vscode.window.showErrorMessage('无法获取Git扩展');
         return;
       }
 
-      const rootPath = workspaceFolders[0].uri.fsPath;
+      const api = gitExtension.getAPI(1);
+      if (!api) {
+        vscode.window.showErrorMessage('无法获取Git API');
+        return;
+      }
+
+      // 获取当前点击的Git源
+      const repository = sourceControl?.rootUri
+        ? api.repositories.find((repo: { rootUri: { fsPath: string } }) => repo.rootUri.fsPath === sourceControl.rootUri.fsPath)
+        : api.repositories[0];
+
+      if (!repository) {
+        vscode.window.showErrorMessage('无法获取Git仓库');
+        return;
+      }
+
+      const rootPath = repository.rootUri.fsPath;
       const git: SimpleGit = simpleGit(rootPath);
 
       // 检查是否有staged文件
@@ -43,31 +60,26 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
 
-      // 根据变更内容生成commit message
-      const commitMessage = await generateCommitMessage(stagedFiles, allDiffs);
 
-      // 获取Git扩展
-      const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
-      if (!gitExtension) {
-        vscode.window.showErrorMessage('无法获取Git扩展');
-        return;
+
+      // 创建状态栏消息
+      const statusBarMessage = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+      statusBarMessage.text = 'AI正在生成commit message...';
+      context.subscriptions.push(statusBarMessage);
+      statusBarMessage.show();
+
+      let commitMessage = '';
+      try {
+        // 根据变更内容生成commit message
+        commitMessage = await generateCommitMessage(stagedFiles, allDiffs, repository.inputBox, statusBarMessage);
+        statusBarMessage.dispose();
+      } catch (error) {
+        statusBarMessage.dispose();
+        throw error;
       }
 
-      const api = gitExtension.getAPI(1);
-      if (!api) {
-        vscode.window.showErrorMessage('无法获取Git API');
-        return;
-      }
-
-      // 获取当前仓库
-      const repositories = api.repositories;
-      if (repositories.length === 0) {
-        vscode.window.showErrorMessage('没有找到Git仓库');
-        return;
-      }
-
-      // 直接设置commit message，不再弹出确认输入框
-      repositories[0].inputBox.value = commitMessage;
+      // 设置最终的commit message
+      repository.inputBox.value = commitMessage;
       vscode.window.showInformationMessage('已设置commit message');
     } catch (error) {
       console.error('生成commit message时出错:', error);
@@ -81,7 +93,7 @@ export function activate(context: vscode.ExtensionContext) {
 /**
  * 调用LLM API生成commit message
  */
-async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<string> {
+async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: any, statusBarMessage: vscode.StatusBarItem): Promise<string> {
   const modelServices = [
     {
       name: 'ollama',
@@ -170,8 +182,9 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
   const apiUrl = config.get<string>('url') || 'http://ollama.e.weibo.com';
   const model = config.get<string>('model') || 'QwQ-32B-AWQ';
   const temperature = config.get<number>('temperature') || 0.7;
-  const topP = config.get<number>('topP') || 1;
+  const topP = config.get<number>('top_p') || 1;
   const protocol = config.get<string>('protocol') || 'ollama';
+  const maxTokens = config.get<number>('max_tokens') || 2048;
 
   // 从配置中获取提示词模板和系统指令
   const promptTemplate = config.get<string>('prompt') || `请根据以下Git变更生成一句话提交信息，格式为<type>: <description>：\${diff}`;
@@ -226,6 +239,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
             content: prompt
           }
         ],
+        max_tokens: maxTokens,
         stream: true
       };
       break;
@@ -239,7 +253,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           }
         ],
         system: system,
-        max_tokens: 1024,
+        max_tokens: maxTokens,
         temperature: temperature,
         stream: true
       };
@@ -260,6 +274,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         temperature: temperature,
         enable_enhancement: false,
         top_p: topP,
+        max_tokens: maxTokens,
         stream: true
       };
       break;
@@ -278,6 +293,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         ],
         temperature: temperature,
         top_p: topP,
+        max_tokens: maxTokens,
         stream: true
       };
       break;
@@ -296,6 +312,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
         ],
         temperature: temperature,
         top_p: topP,
+        max_tokens: maxTokens,
         stream: true
       };
       break;
@@ -314,6 +331,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           ],
           temperature: temperature,
           top_p: topP,
+          max_tokens: maxTokens,
           stream: true
         };
         break;
@@ -324,12 +342,13 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
           prompt: prompt,
           temperature: temperature,
           top_p: topP,
+          max_tokens: maxTokens,
           stream: true
         };
         break;
   }
   
-  console.log('[Committer] requestData:', requestData);
+  console.log('[committer] requestData:', requestData);
 
   // 获取API密钥
   const apiKey = config.get<string>('apiKey') || '';
@@ -352,7 +371,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
     }
   }
   let optionsStr = JSON.stringify(options);
-  console.log(`[Committer]调用LLM API请求: ${optionsStr}`+'\n');
+  console.log(`[committer]调用LLM API请求: ${optionsStr}`+'\n');
 
   return new Promise((resolve, reject) => {
     // 选择http或https模块
@@ -362,17 +381,14 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
       let data = '';
       
       let generatedText = '';
-      
+      let generatedThinking = '';
+      let isThinking = false;
+
       res.on('data', (chunk) => {
         const lines = chunk.toString().split('\n').filter((line: string) => line.trim());
         
         for (const line of lines) {
           try {
-            if (line === '[DONE]') {
-              resolve(generatedText.trim());
-              return;
-            }
-            
             // 去除JSON字符串前的所有字符，只保留从{开始的部分
             const jsonStartIndex = line.indexOf('{');
             if (jsonStartIndex === -1) {
@@ -387,24 +403,123 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
             
             switch (serviceConfig.protocol) {
               case "openai":
-                if (response.choices && response.choices[0]?.delta?.content) {
-                  generatedText += response.choices[0].delta.content;
+                if (response.choices){
+                  if(response.choices[0]?.delta?.content) {
+                    let content = response.choices[0].delta.content;
+                    if (isThinking) {
+                      content = content.replace(/^\n+/, ' ');
+                      generatedThinking += content;
+                    } else {
+                      if (generatedText === '') {
+                        content = content.replace(/^\n+/, '');
+                      } else {
+                        content = content.replace(/^```[a-z0-9]+\n/g, '').replace(/```/g, '');
+                      }
+                      generatedText += content;
+                    }
+                    if (generatedText.match(/^<think>/)) {
+                      generatedThinking = generatedText.replace(/^<think>/, '');
+                      generatedText = '';
+                      isThinking = true;
+                    }
+                    const thinkEndMatch = generatedThinking.match(/<\/think>(.*)$/);
+                    if (thinkEndMatch) {
+                      isThinking = false;
+                      generatedText = thinkEndMatch[1].replace(/^\n+/, '');
+                      generatedThinking = generatedThinking.replace(/<\/think>.*$/, '');
+                    }
+                    if (isThinking) {
+                      statusBarMessage.text = generatedThinking;
+                      statusBarMessage.show();
+                      if (generatedThinking.length > 30) {
+                        generatedThinking = '';
+                      }
+                    } else {
+                      inputBox.value = generatedText;
+                    }
+                  }
+                  if(response.choices[0]?.delta?.reasoning_content) {
+                    if (generatedThinking.length > 30) {
+                      generatedThinking = '';
+                    }
+                    generatedThinking += response.choices[0].delta.reasoning_content.replace(/\n/g, ' ');
+                    statusBarMessage.text = generatedThinking;
+                    statusBarMessage.show();
+                  }
                 }
                 break;
               case "anthropic":
-                if (response.type === 'content_block_delta' && response.delta?.text) {
-                  generatedText += response.delta.text;
+                if (response.type === 'content_block_delta') {
+                  if (response.delta?.text) {
+                    let content = response.delta.text;
+                    if (generatedText === '') {
+                      content = content.replace(/^\n+/, '');
+                    }
+                    generatedText += content;
+                    inputBox.value = generatedText;
+                  }
+                  if (response.delta?.reasoning) {
+                    if (generatedThinking.length > 30) {
+                      generatedThinking = '';
+                    }
+                    generatedThinking += response.delta.reasoning;
+                    statusBarMessage.text = generatedThinking;
+                    statusBarMessage.show();
+                  }
                 }
                 break;
               case "openrouter":
                 if (response.completion) {
-                  generatedText += response.completion;
+                  let content = response.completion;
+                  if (generatedText === '') {
+                    content = content.replace(/^\n+/, '');
+                  }
+                  generatedText += content;
+                  inputBox.value = generatedText;
+                }
+                if (response.reasoning) {
+                  if (generatedThinking.length > 30) {
+                    generatedThinking = '';
+                  }
+                  generatedThinking += response.reasoning;
+                  statusBarMessage.text = generatedThinking;
+                  statusBarMessage.show();
                 }
                 break;
               case "ollama":
               default:
                 if (response.response) {
-                  generatedText += response.response;
+                  let content = response.response;
+                  if (isThinking) {
+                    content = content.replace(/^\n+/, ' ')
+                    generatedThinking += content;
+                  } else {
+                    if (generatedText === '') {
+                      content = content.replace(/^\n+/, '');
+                    }
+                    generatedText += content;
+                  }
+                  if (generatedText.match(/^<think>/)) {
+                    generatedThinking = generatedText.replace(/^<think>/, '');
+                    generatedText = '';
+                    isThinking = true;
+                  }
+                  const thinkEndMatch = generatedThinking.match(/<\/think>(.*)$/);
+                  if (thinkEndMatch) {
+                    isThinking = false;
+                    generatedText = thinkEndMatch[1].replace(/^\n+/, '');
+                    generatedThinking = generatedThinking.replace(/<\/think>.*$/, '');
+                  }
+                  if (isThinking) {
+                    statusBarMessage.text = generatedThinking;
+                    statusBarMessage.show();
+                    if (generatedThinking.length > 30) {
+                      generatedThinking = '';
+                    }
+                  } else {
+                    inputBox.value = generatedText;
+                  }
+                  console.log('[committer]', generatedText, generatedThinking)
                 }
                 break;
             }
@@ -417,7 +532,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
       
       res.on('end', () => {
         if (generatedText) {
-          resolve(generatedText.trim());
+          resolve(generatedText.replace(/^```[a-zA-Z0-9]+\n$/g, '').replace(/\n```/g,''));
         } else {
           reject(new Error('未收到有效的响应数据'));
         }
@@ -437,10 +552,10 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string): Promise<s
 /**
  * 根据暂存文件和diff内容生成commit message
  */
-async function generateCommitMessage(stagedFiles: string[], diffContent: string): Promise<string> {
+async function generateCommitMessage(stagedFiles: string[], diffContent: string, inputBox: any, statusBarMessage: vscode.StatusBarItem): Promise<string> {
   try {
     // 调用LLM API生成commit message
-    return await callLLMAPI(stagedFiles, diffContent);
+    return await callLLMAPI(stagedFiles, diffContent, inputBox, statusBarMessage);
   } catch (error) {
     console.error('调用LLM API失败:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
