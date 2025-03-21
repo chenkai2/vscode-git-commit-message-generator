@@ -80,7 +80,7 @@
           "type": "number",
           "default": 0.7,
           "minimum": 0,
-          "maximum": 2,
+          "maximum": 1,
           "description": "LLM生成结果的温度参数，值越高生成结果越随机"
         },
         "vscode-git-commit-message-generator.llm.top_p": {
