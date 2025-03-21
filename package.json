@@ -1,8 +1,26 @@
 {
   "name": "vscode-git-commit-message-generator",
   "displayName": "Git Commit Message Generator",
-  "description": "根据staged files的代码变更自动生成commit message",
+  "description": "一个强大的Git提交信息生成器，基于AI模型自动分析暂存的代码变更并生成规范的commit message。支持Ollama和OpenAI等多种LLM服务，可自定义提示词模板、温度参数等配置选项，让Git提交更加智能和高效。",
   "version": "0.1.0",
+  "publisher": "chenkai2",
+  "author": {
+    "name": "chenkai2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chenkai2/vscode-git-commit-message-generator.git"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "message",
+    "generator",
+    "ai",
+    "llm",
+    "ollama",
+    "openai"
+  ],
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -40,22 +58,22 @@
       "properties": {
         "vscode-git-commit-message-generator.llm.url": {
           "type": "string",
-          "default": "http://ollama.e.weibo.com/qwen",
+          "default": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
           "description": "LLM API的URL地址。支持Ollama和阿里云百炼"
         },
         "vscode-git-commit-message-generator.llm.model": {
           "type": "string",
-          "default": "qwen2.5:32b",
+          "default": "deepseek-r1-250120",
           "description": "LLM模型类型"
         },
         "vscode-git-commit-message-generator.llm.prompt": {
           "type": "string",
-          "default": "根据以下Git变更生成提交信息，格式为<type>: <description>：\n文件：${files}\n变更：${diff}",
+          "default": "根据以下Git变更生成Git提交信息，格式为 <type>: <description>。\n文件：${files}\n变更内容：${diff}",
           "description": "生成提交信息的提示词模板，支持${files}和${diff}变量"
         },
         "vscode-git-commit-message-generator.llm.system": {
           "type": "string",
-          "default": "请用一句话描述这次代码变更的主要内容，格式为<type>: <description>",
+          "default": "标题行格式为 <type>: <description>，字数不要超过50个。两个换行后，输出正文内容，每个要点作为一个符号列表（Markdown格式），不超过70个字。标题和正文内容都用中文回答，不过type字段必须用英文。",
           "description": "生成提交信息的系统指令"
         },
         "vscode-git-commit-message-generator.llm.temperature": {
@@ -79,7 +97,7 @@
         },
         "vscode-git-commit-message-generator.llm.protocol": {
           "type": "string",
-          "default": "ollama",
+          "default": "openai",
           "description": "LLM API认证的协议，支持 ollama 和 openai"
         },
         "vscode-git-commit-message-generator.llm.max_tokens": {
