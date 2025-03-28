@@ -109,16 +109,16 @@ to generate an appropriate commit message following conventional commit format.`
 		// 获取暂存的文件
 		stagingFiles, diffContent, err := getStagedChanges(cwd)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting staged changes: %v\n", err)
+			fmt.Fprintf(os.Stderr, "获取暂存的变更时发生错误：%v\n", err)
 			os.Exit(1)
 		}
 
 		if len(stagingFiles) == 0 {
-			fmt.Println("No staged files found. Please add files to the staging area first.")
+			fmt.Println("未找到暂存的文件。请先将文件添加到暂存区（git add）。")
 			os.Exit(0)
 		}
 
-		fmt.Printf("Found %d staged files\n", len(stagingFiles))
+		fmt.Printf("找到 %d 个暂存的文件。\n\n", len(stagingFiles))
 
 		// 生成commit message
 		commitMsg, err := generateCommitMessage(stagingFiles, diffContent)
@@ -127,14 +127,20 @@ to generate an appropriate commit message following conventional commit format.`
 			os.Exit(1)
 		}
 
+		fmt.Println("\n\n------------------------")
+
 		// 输出生成的commit message
-		fmt.Println("\nGenerated Commit Message:")
+		fmt.Println("\n暂存的文件:")
+		for _, file := range stagingFiles {
+			fmt.Println("- " + file)
+		}
+		fmt.Println("\n\n生成的提交信息:")
 		fmt.Println("------------------------")
 		fmt.Println(commitMsg)
 		fmt.Println("------------------------")
 
 		// 询问是否使用生成的commit message
-		fmt.Print("Do you want to use this commit message? [Y/n]: ")
+		fmt.Print("您想用此消息提交吗? (默认为Y): [ Y / N]: ")
 		var response string
 		fmt.Scanln(&response)
 
@@ -151,9 +157,9 @@ to generate an appropriate commit message following conventional commit format.`
 				os.Exit(1)
 			}
 
-			fmt.Println("Commit successful!")
+			fmt.Println("提交成功！")
 		} else {
-			fmt.Println("Commit aborted.")
+			fmt.Println("取消提交。")
 		}
 	},
 }
@@ -323,12 +329,12 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 		},
 		{
 			Name:     "anthropic",
-			Protocol: "anthropic",
+			Protocol: "openai",
 			Hostname: "api.anthropic.com",
-			APIPath:  "/messages",
+			APIPath:  "/chat/completions",
 			Headers: map[string]string{
 				"Content-Type":      "application/json",
-				"x-api-key":         "",
+				"Authorization":     "Bearer ",
 				"anthropic-version": "2023-06-01",
 			},
 			AuthKey: "x-api-key",
@@ -408,7 +414,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 			Temperature: temperature,
 			TopP:        topP,
 			MaxTokens:   maxTokens,
-			Stream:      false,
+			Stream:      true,
 		}
 		requestBody, err = json.Marshal(request)
 	case "openai", "anthropic":
@@ -427,7 +433,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 			Temperature: temperature,
 			TopP:        topP,
 			MaxTokens:   maxTokens,
-			Stream:      false,
+			Stream:      true,
 		}
 		requestBody, err = json.Marshal(request)
 	default:
@@ -469,54 +475,92 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
-	}
-
 	// 检查响应状态码
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf("API认证失败：%s", string(respBody))
+		return "", fmt.Errorf("API认证失败")
 	} else if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API请求失败，状态码 %d: %s", resp.StatusCode, string(respBody))
+		return "", fmt.Errorf("API请求失败，状态码 %d", resp.StatusCode)
 	}
 
-	// 解析响应
-	var commitMessage string
-	switch serviceConfig.Protocol {
-	case "ollama":
-		var ollamaResp OllamaResponse
-		if err := json.Unmarshal(respBody, &ollamaResp); err != nil {
-			return "", fmt.Errorf("failed to unmarshal Ollama response: %v", err)
+	// 用于存储完整的提交信息
+	var commitMessage strings.Builder
+	var reasoningContent strings.Builder
+
+	// 处理流式响应
+	for {
+		// 读取一行数据
+		buf := make([]byte, 4096)
+		n, err := resp.Body.Read(buf)
+		if err != nil && err != io.EOF {
+			return "", fmt.Errorf("读取响应时发生错误：%v", err)
 		}
-		commitMessage = ollamaResp.Response
-	case "openai", "anthropic":
-		// 解析OpenAI格式的响应
-		var openaiResp map[string]interface{}
-		if err := json.Unmarshal(respBody, &openaiResp); err != nil {
-			return "", fmt.Errorf("failed to unmarshal OpenAI response: %v", err)
+		if n == 0 {
+			break
 		}
 
-		// 提取生成的文本
-		if choices, ok := openaiResp["choices"].([]interface{}); ok && len(choices) > 0 {
-			if choice, ok := choices[0].(map[string]interface{}); ok {
-				if message, ok := choice["message"].(map[string]interface{}); ok {
-					if content, ok := message["content"].(string); ok {
-						commitMessage = content
+		// 将数据按行分割
+		lines := strings.Split(string(buf[:n]), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || line == "data: [DONE]" {
+				continue
+			}
+
+			// 如果是SSE格式，去掉"data: "前缀
+			line = strings.TrimPrefix(line, "data: ")
+
+			// 尝试解析JSON
+			var response map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &response); err != nil {
+				// 如果是语法错误或其他JSON解析错误，记录详细信息并继续
+				// fmt.Fprintf(os.Stderr, "警告：跳过无效的JSON数据行：%v，原始数据：%s\n", err, line)
+				continue
+			}
+
+			// 检查响应格式是否有效
+			if len(response) == 0 {
+				continue
+			}
+
+			switch serviceConfig.Protocol {
+			case "ollama":
+				if responseText, ok := response["response"].(string); ok && responseText != "" {
+					commitMessage.WriteString(responseText)
+					fmt.Print(responseText)
+				}
+			case "openai":
+				if choices, ok := response["choices"].([]interface{}); ok && len(choices) > 0 {
+					if choice, ok := choices[0].(map[string]interface{}); ok {
+						// 处理不同的响应格式
+						if delta, ok := choice["delta"].(map[string]interface{}); ok {
+							// 处理推理内容
+							if reasoning, ok := delta["reasoning_content"].(string); ok && reasoning != "" {
+								reasoningContent.WriteString(reasoning)
+								fmt.Print(reasoning)
+							}
+							// 处理生成的文本
+							if content, ok := delta["content"].(string); ok && content != "" {
+								commitMessage.WriteString(content)
+								fmt.Print(content)
+							}
+						} else if message, ok := choice["message"].(map[string]interface{}); ok {
+							// 处理非流式响应格式
+							if content, ok := message["content"].(string); ok && content != "" {
+								commitMessage.WriteString(content)
+								fmt.Print(content)
+							}
+						}
 					}
 				}
 			}
 		}
-
-		if commitMessage == "" {
-			return "", fmt.Errorf("failed to extract commit message from response: %s", string(respBody))
-		}
-	default:
-		return "", fmt.Errorf("unsupported protocol: %s", serviceConfig.Protocol)
 	}
 
-	return commitMessage, nil
+	if commitMessage.Len() == 0 {
+		return "", fmt.Errorf("no commit message generated")
+	}
+
+	return strings.Trim(commitMessage.String(), "\n"), nil
 }
 
 // 解析URL
