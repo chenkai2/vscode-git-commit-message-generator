@@ -8,6 +8,16 @@ type Message struct {
 
 var Messages = []Message{
 	{
+		Key:    "cmd.short",
+		ZhHans: "AI驱动的Git提交信息生成器",
+		EnUS:   "AI-powered Git commit message generator",
+	},
+	{
+		Key:    "cmd.long",
+		ZhHans: "Git Commitx是一个强大的Git提交信息生成器，它使用AI模型自动分析暂存的代码变更并生成标准化的提交信息。\n\n它支持各种LLM服务，如Ollama、OpenAI等，具有可自定义的提示模板和配置选项。",
+		EnUS:   "Git Commitx is a powerful Git commit message generator that uses AI models\nto automatically analyze staged code changes and generate standardized commit messages.\n\nIt supports various LLM services like Ollama, OpenAI, and more, with customizable\nprompt templates and configuration options.",
+	},
+	{
 		Key:    "error.get_current_dir",
 		ZhHans: "获取当前目录时发生错误：%v",
 		EnUS:   "Error getting current directory: %v",
@@ -166,5 +176,50 @@ var Messages = []Message{
 		Key:    "error.send_http_request",
 		ZhHans: "发送HTTP请求失败：%v",
 		EnUS:   "Failed to send HTTP request: %v",
+	},
+	{
+		Key:    "flag.url",
+		ZhHans: "LLM API URL",
+		EnUS:   "LLM API URL",
+	},
+	{
+		Key:    "flag.model",
+		ZhHans: "LLM 模型名称",
+		EnUS:   "LLM model name",
+	},
+	{
+		Key:    "flag.prompt",
+		ZhHans: "提交信息生成的提示模板",
+		EnUS:   "Prompt template for commit message generation",
+	},
+	{
+		Key:    "flag.system",
+		ZhHans: "LLM 的系统指令",
+		EnUS:   "System instruction for LLM",
+	},
+	{
+		Key:    "flag.temperature",
+		ZhHans: "LLM 的温度参数 (0-1)",
+		EnUS:   "Temperature parameter for LLM (0-1)",
+	},
+	{
+		Key:    "flag.top_p",
+		ZhHans: "LLM 的 top-p 参数 (0-1)",
+		EnUS:   "Top-p parameter for LLM (0-1)",
+	},
+	{
+		Key:    "flag.protocol",
+		ZhHans: "LLM API 协议 (ollama 或 openai)",
+		EnUS:   "LLM API protocol (ollama or openai)",
+	},
+	{
+		Key:    "flag.api_key",
+		ZhHans: "LLM 服务的 API 密钥",
+		EnUS:   "API key for LLM service",
+	},
+	{
+		Key:    "flag.max_tokens",
+		ZhHans: "LLM 响应的最大令牌数",
+		EnUS:   "Maximum tokens for LLM response",
 	},
 }

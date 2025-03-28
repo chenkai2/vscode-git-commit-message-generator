@@ -23,12 +23,8 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "git-commitx",
-	Short: "AI-powered Git commit message generator",
-	Long: `Git Commitx is a powerful Git commit message generator that uses AI models
-to automatically analyze staged code changes and generate standardized commit messages.
-
-It supports various LLM services like Ollama, OpenAI, and more, with customizable
-prompt templates and configuration options.`,
+	Short: i18n.T("cmd.short"),
+	Long:  i18n.T("cmd.long"),
 	Run: func(cmd *cobra.Command, args []string) {
 		// 获取当前目录
 		cwd, err := os.Getwd()
@@ -521,15 +517,15 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// 添加命令行标志
-	rootCmd.Flags().String("url", "", "LLM API URL")
-	rootCmd.Flags().String("model", "", "LLM model name")
-	rootCmd.Flags().String("prompt", "", "Prompt template for commit message generation")
-	rootCmd.Flags().String("system", "", "System instruction for LLM")
-	rootCmd.Flags().Float64("temperature", 0.7, "Temperature parameter for LLM (0-1)")
-	rootCmd.Flags().Float64("top-p", 0.9, "Top-p parameter for LLM (0-1)")
-	rootCmd.Flags().String("protocol", "", "LLM API protocol (ollama or openai)")
-	rootCmd.Flags().String("api-key", "", "API key for LLM service")
-	rootCmd.Flags().Int("max-tokens", 2048, "Maximum tokens for LLM response")
+	rootCmd.Flags().String("url", "", i18n.T("flag.url"))
+	rootCmd.Flags().String("model", "", i18n.T("flag.model"))
+	rootCmd.Flags().String("prompt", "", i18n.T("flag.prompt"))
+	rootCmd.Flags().String("system", "", i18n.T("flag.system"))
+	rootCmd.Flags().Float64("temperature", 0.7, i18n.T("flag.temperature"))
+	rootCmd.Flags().Float64("top-p", 0.9, i18n.T("flag.top_p"))
+	rootCmd.Flags().String("protocol", "", i18n.T("flag.protocol"))
+	rootCmd.Flags().String("api-key", "", i18n.T("flag.api_key"))
+	rootCmd.Flags().Int("max-tokens", 2048, i18n.T("flag.max_tokens"))
 
 	// 绑定标志到viper
 	viper.BindPFlag("commit-message-generator.llm.url", rootCmd.Flags().Lookup("url"))
