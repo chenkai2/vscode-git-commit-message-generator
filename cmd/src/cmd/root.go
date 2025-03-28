@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,8 +18,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -182,7 +181,7 @@ func getStagedChanges(repoPath string) ([]string, string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, "", fmt.Errorf(i18n.T("error.get_staged_files", err, stderr.String()))
+		return nil, "", errors.New(i18n.T("error.get_staged_files", err, stderr.String()))
 	}
 
 	// 解析暂存的文件列表
@@ -203,7 +202,7 @@ func getStagedChanges(repoPath string) ([]string, string, error) {
 
 		diffOutput, err := diffCmd.Output()
 		if err != nil {
-			return nil, "", fmt.Errorf(i18n.T("error.get_file_diff", file, err, diffStderr.String()))
+			return nil, "", errors.New(i18n.T("error.get_file_diff", file, err, diffStderr.String()))
 		}
 
 		allDiffs.WriteString(fmt.Sprintf("\n文件: %s\n%s\n", file, string(diffOutput)))
@@ -217,7 +216,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	// 获取配置
 	apiURL := viper.GetString("commit-message-generator.llm.url")
 	if apiURL == "" {
-		return "", fmt.Errorf(i18n.T("error.llm_api_url_not_configured"))
+		return "", errors.New(i18n.T("error.llm_api_url_not_configured"))
 	}
 
 	model := viper.GetString("commit-message-generator.llm.model")
@@ -318,7 +317,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	// 解析URL
 	parsedURL, err := parseURL(apiURL)
 	if err != nil {
-		return "", fmt.Errorf(i18n.T("error.parse_api_url", err))
+		return "", errors.New(i18n.T("error.parse_api_url", err))
 	}
 
 	// 获取匹配的服务配置
@@ -341,7 +340,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	}
 
 	if serviceConfig == nil {
-		return "", fmt.Errorf(i18n.T("error.no_matching_llm_service", apiURL, protocol))
+		return "", errors.New(i18n.T("error.no_matching_llm_service", apiURL, protocol))
 	}
 
 	// 准备请求数据
@@ -378,11 +377,11 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 		}
 		requestBody, err = json.Marshal(request)
 	default:
-		return "", fmt.Errorf(i18n.T("error.unsupported_protocol", serviceConfig.Protocol))
+		return "", errors.New(i18n.T("error.unsupported_protocol", serviceConfig.Protocol))
 	}
 
 	if err != nil {
-		return "", fmt.Errorf(i18n.T("error.marshal_request", err))
+		return "", errors.New(i18n.T("error.marshal_request", err))
 	}
 
 	// 创建请求选项
@@ -412,15 +411,15 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf(i18n.T("error.send_http_request", err))
+		return "", errors.New(i18n.T("error.send_http_request", err))
 	}
 	defer resp.Body.Close()
 
 	// 检查响应状态码
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf(i18n.T("error.api_auth_failed"))
+		return "", errors.New(i18n.T("error.api_auth_failed"))
 	} else if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf(i18n.T("error.api_request_failed", resp.StatusCode))
+		return "", errors.New(i18n.T("error.api_request_failed", resp.StatusCode))
 	}
 
 	// 用于存储完整的提交信息
@@ -433,7 +432,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 		buf := make([]byte, 4096)
 		n, err := resp.Body.Read(buf)
 		if err != nil && err != io.EOF {
-			return "", fmt.Errorf(i18n.T("error.read_response", err))
+			return "", errors.New(i18n.T("error.read_response", err))
 		}
 		if n == 0 {
 			break
@@ -498,7 +497,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	}
 
 	if commitMessage.Len() == 0 {
-		return "", fmt.Errorf(i18n.T("error.no_commit_msg"))
+		return "", errors.New(i18n.T("error.no_commit_msg"))
 	}
 
 	return strings.Trim(commitMessage.String(), "\n"), nil
