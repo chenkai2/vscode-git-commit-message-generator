@@ -5,3 +5,4 @@ package-lock.json
 *.vsix
 .DS_Store
 /cmd/src/vendor/
+/cmd/src/bin/
