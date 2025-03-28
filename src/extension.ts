@@ -134,10 +134,10 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
       // @doc https://docs.anthropic.com/en/api/getting-started
       hostname: 'api.anthropic.com',
       protocol: 'anthropic',
-      apiSuffix: '/messages',
+      apiSuffix: '/chat/completions',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': '',
+        "Authorization": "Bearer ",
         'anthropic-version': '2023-06-01'
       },
       AuthKey: 'x-api-key'

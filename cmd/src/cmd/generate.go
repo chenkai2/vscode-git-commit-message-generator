@@ -183,7 +183,7 @@ func init() {
 			"url":         "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
 			"model":       "deepseek-v3",
 			"prompt":      "根据以下Git变更生成Git提交信息，格式为 <type>: <description>。\n文件：${files}\n变更内容：${diff}",
-			"system":      "标题行格式为 <type>: <description>，字数不要超过50个。两个换行后，输出正文内容，每个要点作为一个符号列表（Markdown格式），不超过70个字。标题和正文内容都用中文回答，不过type字段必须用英文。",
+			"system":      "标题行格式为 <type>: <description>，字数不要超过50个，description如果不是中文，则翻译成中文。两个换行后，输出正文内容，每个要点作为一个符号列表，不超过70个字。type使用英文，description和正文用中文，如果不是，则翻译成中文。要点简洁清晰。",
 			"temperature": 0.7,
 			"top-p":       0.9,
 			"protocol":    "openai",
