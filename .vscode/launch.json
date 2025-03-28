@@ -10,10 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/src/main.go",
-            "cwd": "${workspaceFolder}/cmd/src",
-            "args": [
-                "generate"
-            ]
+            "cwd": "${workspaceFolder}/cmd/src"
         }
     ]
 }

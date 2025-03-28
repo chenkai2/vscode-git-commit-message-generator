@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/chenkai2/git-commitx/i18n"
 	"github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,7 +33,7 @@ prompt templates and configuration options.`,
 		// 获取当前目录
 		cwd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
+			fmt.Fprintf(os.Stderr, i18n.T("error.get_current_dir", err)+"\n")
 			os.Exit(1)
 		}
 
@@ -44,14 +45,14 @@ prompt templates and configuration options.`,
 				break
 			}
 			if err != git.ErrRepositoryNotExists {
-				fmt.Fprintf(os.Stderr, "打开Git仓库时发生错误：%v\n", err)
+				fmt.Fprintf(os.Stderr, i18n.T("error.open_git_repo", err)+"\n")
 				os.Exit(1)
 			}
 
 			// 获取父目录
 			parent := filepath.Dir(gitRoot)
 			if parent == gitRoot {
-				fmt.Fprintf(os.Stderr, "错误：未找到Git仓库。\n请确保你在Git仓库目录或其子目录下执行此命令，或者使用 'git init' 初始化一个新的仓库。\n")
+				fmt.Fprintf(os.Stderr, i18n.T("error.no_git_repo")+"\n")
 				os.Exit(1)
 			}
 			gitRoot = parent
@@ -63,38 +64,38 @@ prompt templates and configuration options.`,
 		// 获取暂存的文件
 		stagingFiles, diffContent, err := getStagedChanges(cwd)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "获取暂存的变更时发生错误：%v\n", err)
+			fmt.Fprintf(os.Stderr, i18n.T("error.get_staged_changes", err)+"\n")
 			os.Exit(1)
 		}
 
 		if len(stagingFiles) == 0 {
-			fmt.Println("未找到暂存的文件。请先将文件添加到暂存区（git add）。")
+			fmt.Println(i18n.T("info.no_staged_files"))
 			os.Exit(0)
 		}
 
-		fmt.Printf("找到 %d 个暂存的文件。\n\n", len(stagingFiles))
+		fmt.Printf(i18n.T("info.found_staged_files", len(stagingFiles)) + "\n\n")
 
 		// 生成commit message
 		commitMsg, err := generateCommitMessage(stagingFiles, diffContent)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating commit message: %v\n", err)
+			fmt.Fprintf(os.Stderr, i18n.T("error.generate_commit_msg", err)+"\n")
 			os.Exit(1)
 		}
 
 		fmt.Println("\n\n------------------------")
 
 		// 输出生成的commit message
-		fmt.Println("\n暂存的文件:")
+		fmt.Println("\n" + i18n.T("info.staged_files"))
 		for _, file := range stagingFiles {
 			fmt.Println("- " + file)
 		}
-		fmt.Println("\n\n生成的提交信息:")
+		fmt.Println("\n\n" + i18n.T("info.generated_commit_msg"))
 		fmt.Println("------------------------")
 		fmt.Println(commitMsg)
 		fmt.Println("------------------------")
 
 		// 询问是否使用生成的commit message
-		fmt.Print("您想用此消息提交吗? (默认为Y): [ Y / N]: ")
+		fmt.Print(i18n.T("prompt.use_commit_msg"))
 		var response string
 		fmt.Scanln(&response)
 
@@ -107,13 +108,13 @@ prompt templates and configuration options.`,
 
 			err = cmd.Run()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error executing git commit: %v\n", err)
+				fmt.Fprintf(os.Stderr, i18n.T("error.execute_git_commit", err)+"\n")
 				os.Exit(1)
 			}
 
-			fmt.Println("提交成功！")
+			fmt.Println(i18n.T("info.commit_success"))
 		} else {
-			fmt.Println("取消提交。")
+			fmt.Println(i18n.T("info.commit_cancelled"))
 		}
 	},
 }
@@ -185,7 +186,7 @@ func getStagedChanges(repoPath string) ([]string, string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, "", fmt.Errorf("获取暂存文件列表失败：%v\n%s", err, stderr.String())
+		return nil, "", fmt.Errorf(i18n.T("error.get_staged_files", err, stderr.String()))
 	}
 
 	// 解析暂存的文件列表
@@ -206,7 +207,7 @@ func getStagedChanges(repoPath string) ([]string, string, error) {
 
 		diffOutput, err := diffCmd.Output()
 		if err != nil {
-			return nil, "", fmt.Errorf("获取文件 %s 的差异失败：%v\n%s", file, err, diffStderr.String())
+			return nil, "", fmt.Errorf(i18n.T("error.get_file_diff", file, err, diffStderr.String()))
 		}
 
 		allDiffs.WriteString(fmt.Sprintf("\n文件: %s\n%s\n", file, string(diffOutput)))
@@ -220,7 +221,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	// 获取配置
 	apiURL := viper.GetString("commit-message-generator.llm.url")
 	if apiURL == "" {
-		return "", fmt.Errorf("LLM API URL is not configured. Please set it in .gitconfig or provide --url flag")
+		return "", fmt.Errorf(i18n.T("error.llm_api_url_not_configured"))
 	}
 
 	model := viper.GetString("commit-message-generator.llm.model")
@@ -321,7 +322,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	// 解析URL
 	parsedURL, err := parseURL(apiURL)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse API URL: %v", err)
+		return "", fmt.Errorf(i18n.T("error.parse_api_url", err))
 	}
 
 	// 获取匹配的服务配置
@@ -344,7 +345,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	}
 
 	if serviceConfig == nil {
-		return "", fmt.Errorf("no matching LLM service found for URL %s and protocol %s", apiURL, protocol)
+		return "", fmt.Errorf(i18n.T("error.no_matching_llm_service", apiURL, protocol))
 	}
 
 	// 准备请求数据
@@ -381,11 +382,11 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 		}
 		requestBody, err = json.Marshal(request)
 	default:
-		return "", fmt.Errorf("unsupported protocol: %s", serviceConfig.Protocol)
+		return "", fmt.Errorf(i18n.T("error.unsupported_protocol", serviceConfig.Protocol))
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %v", err)
+		return "", fmt.Errorf(i18n.T("error.marshal_request", err))
 	}
 
 	// 创建请求选项
@@ -415,15 +416,15 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send HTTP request: %v", err)
+		return "", fmt.Errorf(i18n.T("error.send_http_request", err))
 	}
 	defer resp.Body.Close()
 
 	// 检查响应状态码
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf("API认证失败")
+		return "", fmt.Errorf(i18n.T("error.api_auth_failed"))
 	} else if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API请求失败，状态码 %d", resp.StatusCode)
+		return "", fmt.Errorf(i18n.T("error.api_request_failed", resp.StatusCode))
 	}
 
 	// 用于存储完整的提交信息
@@ -436,7 +437,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 		buf := make([]byte, 4096)
 		n, err := resp.Body.Read(buf)
 		if err != nil && err != io.EOF {
-			return "", fmt.Errorf("读取响应时发生错误：%v", err)
+			return "", fmt.Errorf(i18n.T("error.read_response", err))
 		}
 		if n == 0 {
 			break
@@ -501,7 +502,7 @@ func generateCommitMessage(stagedFiles []string, diffContent string) (string, er
 	}
 
 	if commitMessage.Len() == 0 {
-		return "", fmt.Errorf("no commit message generated")
+		return "", fmt.Errorf(i18n.T("error.no_commit_msg"))
 	}
 
 	return strings.Trim(commitMessage.String(), "\n"), nil
@@ -577,7 +578,7 @@ func initConfig() {
 				// 如果配置不存在，写入默认值
 				cmd := exec.Command("git", "config", "--global", configKey, fmt.Sprintf("%v", value))
 				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: Failed to write default config %s: %v\n", configKey, err)
+					fmt.Fprintf(os.Stderr, i18n.T("error.write_default_config", configKey, err)+"\n")
 				}
 			}
 			// 将Git配置同步到viper
@@ -589,14 +590,14 @@ func initConfig() {
 		var helpMsg string
 		protocol := getConfig("commit-message-generator.llm.protocol")
 		if protocol == "ollama" {
-			helpMsg = "Ollama服务不需要API密钥，请确保Ollama服务已启动并可访问。"
+			helpMsg = i18n.T("prompt.ollama_no_key")
 		} else {
 			apiURL := getConfig("commit-message-generator.llm.url")
 			parsedURL, err := url.Parse(apiURL)
 			if err == nil && parsedURL.Host != "" {
-				helpMsg = fmt.Sprintf("请输入(%s) API 密钥：", parsedURL.Host)
+				helpMsg = i18n.T("prompt.enter_api_key_for", parsedURL.Host)
 			} else {
-				helpMsg = "请输入API密钥："
+				helpMsg = i18n.T("prompt.enter_api_key")
 			}
 		}
 
@@ -609,15 +610,15 @@ func initConfig() {
 				// 将API密钥保存到Git配置
 				cmd := exec.Command("git", "config", "--global", "commit-message-generator.llm.api-key", apiKey)
 				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "Error saving API key: %v\n", err)
+					fmt.Fprintf(os.Stderr, i18n.T("error.save_api_key", err)+"\n")
 				} else {
 					// 更新Viper的内存配置
 					viper.Set("commit-message-generator.llm.api-key", apiKey)
-					fmt.Println("API密钥已成功保存")
+					fmt.Println(i18n.T("info.api_key_saved"))
 				}
 			}
 		} else {
-			helpMsg += "\n或者切换到其他LLM服务：git config --global commit-message-generator.llm.url 'new-api-url'"
+			helpMsg += "\n" + i18n.T("prompt.switch_llm_service")
 			fmt.Fprintln(os.Stderr, helpMsg)
 		}
 	}
