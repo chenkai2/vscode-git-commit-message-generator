@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.1] - 2024-03-25
+
+### 新功能
+- 添加对阿里云百炼API的支持，提供多种模型选择
+  - deepseek-v3
+  - deepseek-r1
+  - qwen2.5-32b-instruct
+  - deepseek-r1-distill-qwen-32b
+  - qwen-plus
+  - deepseek-r1-distill-llama-70b
+  - qwen2-7b-instruct
+- 添加对火山引擎API的支持，包含以下模型
+  - deepseek-r1-250120
+  - deepseek-r1-distill-qwen-32b-250120
+  - deepseek-v3-241226
+  - doubao-1-5-pro-256k-250115
+- 优化本地部署Ollama的支持
+- 完善README文档，添加详细的配置说明
+
+### 修复
+- 修复删除文件时的提交信息生成问题
+- 优化错误处理和提示信息
+
 ## [0.1.0] - 2024-03-21
 
 ### 优化
