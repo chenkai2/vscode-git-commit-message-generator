@@ -1,7 +1,7 @@
 # Git Commit Message Generator
 
 <p align="center">
-  <img src="media/panda-avatar.svg" alt="Git Commit Message Generator Logo" width="128" height="128">
+  <img src="media/panda-avatar.png" alt="Git Commit Message Generator Logo" width="128" height="128">
 </p>
 
 一个强大的Git提交信息生成器，基于AI模型自动分析暂存的代码变更并生成规范的commit message。
@@ -47,11 +47,6 @@
 3. 点击工具栏中的"生成 Commit Message"按钮
 4. 插件会自动分析暂存的代码变更，并生成规范的提交信息
 5. DeepSeek等有推理过程的大模型，会在状态栏显示推理过程
-
-<p align="center">
-  <img src="media/commit-message-generator-light.svg" alt="使用示例" width="24" height="24">
-  点击此按钮生成提交信息
-</p>
 
 ## 配置选项
 
