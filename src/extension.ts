@@ -51,12 +51,64 @@ export function activate(context: vscode.ExtensionContext) {
 
       // 获取每个文件的diff
       let allDiffs = '';
-      for (const file of stagedFiles) {
+      // 分类文件
+      const deletedFiles = stagedFiles.filter(file => file.startsWith('D '));
+      const otherFiles = stagedFiles.filter(file => !file.startsWith('D '));
+      
+      // 处理非删除文件
+      for (const file of otherFiles) {
         try {
           const diff = await git.diff(['--cached', file]);
           allDiffs += `\n文件: ${file}\n${diff}\n`;
         } catch (error) {
           console.error(`获取文件 ${file} 的diff失败:`, error);
+        }
+      }
+      
+      // 特殊处理删除的文件
+      for (const file of deletedFiles) {
+        try {
+          // 尝试获取删除文件的基本信息
+          const fileName = file.split(' ').pop() || '';
+          // 尝试获取文件的最后一次提交信息，了解文件的用途
+          let fileInfo = '';
+          let fileContent = '';
+          try {
+            // 获取文件的最后一次提交日志
+            const log = await git.log({ file: fileName, maxCount: 1 });
+            if (log.all.length > 0) {
+              const lastCommit = log.all[0];
+              fileInfo = `\n最后一次提交信息: ${lastCommit.message}\n`;
+              
+              // 尝试获取文件在最后一次提交前的内容
+              try {
+                // 使用git show命令获取文件的历史版本内容
+                const fileHistoryContent = await git.raw(['show', `${lastCommit.hash}:${fileName}`]);
+                if (fileHistoryContent) {
+                  // 限制文件内容长度，避免过大
+                  const maxContentLength = 1000;
+                  const truncatedContent = fileHistoryContent.length > maxContentLength
+                    ? fileHistoryContent.substring(0, maxContentLength) + '\n... (内容过长已截断)'
+                    : fileHistoryContent;
+                  fileContent = `\n文件内容:\n\`\`\`\n${truncatedContent}\n\`\`\`\n`;
+                }
+              } catch (showError) {
+                console.log(`获取文件 ${fileName} 的历史内容失败:`, showError);
+              }
+            }
+          } catch (logError) {
+            console.log(`获取文件 ${fileName} 的提交历史失败:`, logError);
+          }
+          
+          // 添加删除文件的上下文信息
+          allDiffs += `\n文件: ${file} (已删除)${fileInfo}${fileContent}`;
+          // 尝试获取删除文件的diff（可能只显示文件被删除）
+          const diff = await git.diff(['--cached', fileName]);
+          allDiffs += `${diff}\n`;
+        } catch (error) {
+          console.error(`获取删除文件 ${file} 的信息失败:`, error);
+          // 即使获取失败，也添加基本信息
+          allDiffs += `\n文件: ${file} (已删除，无法获取更多信息)\n`;
         }
       }
 
@@ -542,7 +594,7 @@ function generateLocalCommitMessage(stagedFiles: string[], diffContent: string):
   if (newFiles.length > 0 && modifiedFiles.length === 0 && deletedFiles.length === 0) {
     prefix = 'feat: ';
   } else if (deletedFiles.length > 0 && newFiles.length === 0 && modifiedFiles.length === 0) {
-    prefix = 'chore: ';
+    prefix = 'remove: ';
   } else if (modifiedFiles.length > 0) {
     // 检查是否包含测试文件
     const isTestChange = modifiedFiles.some(file => 
@@ -563,6 +615,9 @@ function generateLocalCommitMessage(stagedFiles: string[], diffContent: string):
         prefix = 'feat: ';
       }
     }
+  } else if (deletedFiles.length > 0) {
+    // 如果有删除文件但同时有其他类型的变更，优先考虑是否为删除操作
+    prefix = 'remove: ';
   } else {
     prefix = 'chore: ';
   }
@@ -580,14 +635,15 @@ function generateLocalCommitMessage(stagedFiles: string[], diffContent: string):
     } else if (modifiedFiles.length === 1) {
       description = `更新${fileNameWithoutExt}功能`;
     } else if (deletedFiles.length === 1) {
-      description = `移除${fileNameWithoutExt}功能`;
+      // 对删除文件提供更具体的描述
+      description = `删除${fileNameWithoutExt}`;
     }
   } else {
     // 多个文件的情况
     if (newFiles.length > 0 && modifiedFiles.length === 0 && deletedFiles.length === 0) {
       description = `添加新功能，涉及${newFiles.length}个文件`;
     } else if (deletedFiles.length > 0 && newFiles.length === 0 && modifiedFiles.length === 0) {
-      description = `移除功能，涉及${deletedFiles.length}个文件`;
+      description = `删除文件，共${deletedFiles.length}个`;
     } else if (modifiedFiles.length > 0) {
       description = `更新功能，涉及${modifiedFiles.length}个文件`;
     } else {
