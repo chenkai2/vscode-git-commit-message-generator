@@ -90,10 +90,18 @@ export function activate(context: vscode.ExtensionContext) {
                 const fileHistoryContent = await git.raw(['show', `${lastCommit.hash}:${fileName}`]);
                 if (fileHistoryContent) {
                   // 限制文件内容长度，避免过大
-                  const maxContentLength = 1000;
-                  const truncatedContent = fileHistoryContent.length > maxContentLength
-                    ? fileHistoryContent.substring(0, maxContentLength) + '\n... (内容过长已截断)'
-                    : fileHistoryContent;
+                  const maxContentLength = 300; // 最多300个字符
+                  const lines = fileHistoryContent.split('\n');
+                  const first15Lines = lines.slice(0, 15).join('\n'); // 最多取15行
+                  
+                  // 同时满足字符数和行数限制
+                  let truncatedContent = first15Lines;
+                  if (truncatedContent.length > maxContentLength) {
+                    truncatedContent = truncatedContent.substring(0, maxContentLength) + '\n... (内容过长已截断)';
+                  } else if (lines.length > 15) {
+                    truncatedContent += '\n... (只显示前15行)';
+                  }
+                  
                   fileContent = `\n文件内容:\n\`\`\`\n${truncatedContent}\n\`\`\`\n`;
                 }
               } catch (showError) {
