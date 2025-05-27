@@ -45,9 +45,13 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      // 创建状态栏消息
+      const statusBarMessage = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
       // 获取暂存区的文件变更
       const stagedFiles = status.staged;
-      vscode.window.showInformationMessage(`找到 ${stagedFiles.length} 个暂存的文件`);
+      statusBarMessage.text = `找到 ${stagedFiles.length} 个暂存的文件`;
+      context.subscriptions.push(statusBarMessage);
+      statusBarMessage.show();
 
       // 获取每个文件的diff
       let allDiffs = '';
@@ -112,13 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
 
-
-
-      // 创建状态栏消息
-      const statusBarMessage = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
       statusBarMessage.text = 'AI正在生成commit message...';
-      context.subscriptions.push(statusBarMessage);
-      statusBarMessage.show();
 
       let commitMessage = '';
       try {
@@ -132,7 +130,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       // 设置最终的commit message
       repository.inputBox.value = commitMessage;
-      vscode.window.showInformationMessage('已设置commit message');
+      statusBarMessage.text = '已设置commit message';
     } catch (error) {
       console.error('生成commit message时出错:', error);
       vscode.window.showErrorMessage(`生成commit message失败: ${error}`);
