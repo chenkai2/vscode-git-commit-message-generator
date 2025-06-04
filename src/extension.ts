@@ -113,7 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
           
           // 添加删除文件的上下文信息
-          allDiffs += `\n文件: ${file} (已删除)${fileInfo}${fileContent}`;
+          allDiffs += `\n已删除的文件: ${file} ${fileInfo}${fileContent}`;
           // 尝试获取删除文件的diff（可能只显示文件被删除）
           const diff = await git.diff(['--cached', fileName]);
           allDiffs += `${diff}\n`;
@@ -236,17 +236,53 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
     }
   ];
   // 获取配置
-  const config = vscode.workspace.getConfiguration('vscode-git-commit-message-generator.llm');
-  const apiUrl = config.get<string>('url') || 'http://ollama.e.weibo.com';
-  const model = config.get<string>('model') || 'QwQ-32B-AWQ';
-  const temperature = config.get<number>('temperature') || 0.7;
-  const topP = config.get<number>('top_p') || 1;
-  const protocol = config.get<string>('protocol') || 'ollama';
-  const maxTokens = config.get<number>('max_tokens') || 2048;
+  const config = vscode.workspace.getConfiguration('vscode-git-commit-message-generator');
+  const provider = config.get<string>('llm.provider') || 'aliyun';
+  var apiUrl = '';
+  var model = '';
+  var apiKey = '';
+  var protocol = 'openai';
+  const temperature = config.get<number>('llm.temperature') || 0.7;
+  const topP = config.get<number>('llm.top_p') || 1;
+  const maxTokens = config.get<number>('llm.max_tokens') || 2048;
+  if (provider == "custom") {
+    apiUrl = config.get<string>(`providers.${provider}.url`) || '';
+    const oldApiUrl = config.get<string>('llm.url') || '';
+    const oldProtocol = config.get<string>('llm.protocol') || '';
+    const oldModel = config.get<string>('llm.model') || '';
+    const oldApiKey = config.get<string>('llm.apiKey') || '';
+    if (apiUrl == '' && oldApiUrl != '') {
+      apiUrl = oldApiUrl;
+      try {
+        config.update(`providers.${provider}.url`, oldApiUrl, vscode.ConfigurationTarget.Global);
+        config.update(`providers.${provider}.protocol`, oldProtocol, vscode.ConfigurationTarget.Global);
+        config.update(`providers.${provider}.apiKey`, oldApiKey, vscode.ConfigurationTarget.Global);
+        config.update(`providers.${provider}.model`, oldModel, vscode.ConfigurationTarget.Global);
+      } catch (error) {
+        console.error('更新配置失败:', error);
+        vscode.window.showErrorMessage(`同步 ${provider} 配置失败: ${error}`);
+      }
+    }
+    model = config.get<string>(`providers.${provider}.model`) || oldModel || '';
+    protocol = config.get<string>(`providers.${provider}.protocol`) || oldProtocol || 'openai';
+    apiKey = config.get<string>(`providers.${provider}.apiKey`) || oldApiKey || '';
+  } else {
+    // 获取提供商的预设配置
+    const providerPresets = getProviderPresets();
+    const preset = providerPresets[provider];
+
+    if (!preset) {
+      console.warn(`未找到提供商 ${provider} 的预设配置`);
+    }
+    apiUrl = config.get<string>(`providers.${provider}.url`) || preset?.url || '';
+    model = config.get<string>(`providers.${provider}.model`) || preset?.model || '';
+    protocol = config.get<string>(`providers.${provider}.protocol`) || preset?.protocol || 'openai';
+    apiKey = config.get<string>(`providers.${provider}.apiKey`) || '';
+  }
 
   // 从配置中获取提示词模板和系统指令
-  const promptTemplate = config.get<string>('prompt') || `请根据以下Git变更生成一句话提交信息，格式为<type>: <description>：\${diff}`;
-  const system = config.get<string>('system') || `请用一句话描述这次代码变更的主要内容，格式为<type>: <description>`
+  const promptTemplate = config.get<string>('llm.prompt') || `请根据以下Git变更生成一句话提交信息，格式为<type>: <description>：\${diff}`;
+  const system = config.get<string>('llm.system') || `请用一句话描述这次代码变更的主要内容，格式为<type>: <description>`
 
   // 替换模板变量
   const prompt = promptTemplate
@@ -404,9 +440,6 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
   }
   
   console.log('[committer] requestData:', requestData);
-
-  // 获取API密钥
-  const apiKey = config.get<string>('apiKey') || '';
 
   // 创建请求选项
   const options = {
@@ -658,6 +691,59 @@ function generateLocalCommitMessage(stagedFiles: string[], diffContent: string):
   }
 
   return `${prefix}${description}`;
+}
+
+/**
+ * 获取各个提供商的预设配置
+ */
+function getProviderPresets(): Record<string, any> {
+  return {
+    'aliyun': {
+      url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      model: 'deepseek-v3',
+      protocol: 'openai'
+    },
+    'openai': {
+      url: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-4o-mini',
+      protocol: 'openai'
+    },
+    'ollama': {
+      url: 'http://localhost:11434/api/generate',
+      model: 'deepseek-r1:7b',
+      protocol: 'ollama'
+    },
+    'deepseek': {
+      url: 'https://api.deepseek.com/v1/chat/completions',
+      model: 'deepseek-chat',
+      protocol: 'openai'
+    },
+    'anthropic': {
+      url: 'https://api.anthropic.com/v1/messages',
+      model: 'claude-3-haiku-20240307',
+      protocol: 'anthropic'
+    },
+    'tencent': {
+      url: 'https://api.hunyuan.cloud.tencent.com/v1/chat/completions',
+      model: 'hunyuan-lite',
+      protocol: 'openai'
+    },
+    'siliconflow': {
+      url: 'https://api.siliconflow.cn/v1/chat/completions',
+      model: 'deepseek-ai/DeepSeek-V3',
+      protocol: 'openai'
+    },
+    'volcengine': {
+      url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+      model: 'deepseek-v3-250324',
+      protocol: 'openai'
+    },
+    'custom': {
+      url: '',
+      model: '',
+      protocol: 'openai'
+    }
+  };
 }
 
 export function deactivate() {}
