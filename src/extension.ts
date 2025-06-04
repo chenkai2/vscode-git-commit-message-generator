@@ -55,9 +55,10 @@ export function activate(context: vscode.ExtensionContext) {
 
       // 获取每个文件的diff
       let allDiffs = '';
-      // 分类文件
-      const deletedFiles = stagedFiles.filter(file => file.startsWith('D '));
-      const otherFiles = stagedFiles.filter(file => !file.startsWith('D '));
+      // 分类文件 - 使用status.deleted和status.staged的交集确定删除文件
+      const deletedFiles = stagedFiles.filter(file => status.deleted.includes(file));
+      // 其他文件是staged文件减去deletedFiles
+      const otherFiles = stagedFiles.filter(file => !deletedFiles.includes(file));
       
       // 处理非删除文件
       for (const file of otherFiles) {
@@ -73,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
       for (const file of deletedFiles) {
         try {
           // 尝试获取删除文件的基本信息
-          const fileName = file.split(' ').pop() || '';
+          const fileName = file || '';
           // 尝试获取文件的最后一次提交信息，了解文件的用途
           let fileInfo = '';
           let fileContent = '';
@@ -82,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
             const log = await git.log({ file: fileName, maxCount: 1 });
             if (log.all.length > 0) {
               const lastCommit = log.all[0];
-              fileInfo = `\n最后一次提交信息: ${lastCommit.message}\n`;
+              fileInfo = `\n该文件最后一次提交信息: ${lastCommit.message}\n`;
               
               // 尝试获取文件在最后一次提交前的内容
               try {
@@ -102,7 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
                     truncatedContent += '\n... (只显示前15行)';
                   }
                   
-                  fileContent = `\n文件内容:\n\`\`\`\n${truncatedContent}\n\`\`\`\n`;
+                  fileContent = `\n该文件删除的内容:\n\`\`\`\n${truncatedContent}\n\`\`\`\n`;
                 }
               } catch (showError) {
                 console.log(`获取文件 ${fileName} 的历史内容失败:`, showError);
@@ -113,10 +114,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
           
           // 添加删除文件的上下文信息
-          allDiffs += `\n已删除的文件: ${file} ${fileInfo}${fileContent}`;
-          // 尝试获取删除文件的diff（可能只显示文件被删除）
-          const diff = await git.diff(['--cached', fileName]);
-          allDiffs += `${diff}\n`;
+          allDiffs += `\n已删除的文件: ${file} ${fileInfo}${fileContent}\n`;
         } catch (error) {
           console.error(`获取删除文件 ${file} 的信息失败:`, error);
           // 即使获取失败，也添加基本信息
@@ -129,7 +127,11 @@ export function activate(context: vscode.ExtensionContext) {
       let commitMessage = '';
       try {
         // 根据变更内容生成commit message
-        commitMessage = await generateCommitMessage(stagedFiles, allDiffs, repository.inputBox, statusBarMessage);
+        // 为已删除文件添加后缀
+        const markedFiles = stagedFiles.map(file => 
+          deletedFiles.includes(file) ? `${file}（已删除）` : file
+        );
+        commitMessage = await generateCommitMessage(markedFiles, allDiffs, repository.inputBox, statusBarMessage);
         statusBarMessage.dispose();
       } catch (error) {
         statusBarMessage.dispose();
