@@ -702,7 +702,7 @@ function getProviderPresets(): Record<string, any> {
   return {
     'aliyun': {
       url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-      model: 'deepseek-v3',
+      model: 'deepseek-r1-distill-llama-70b',
       protocol: 'openai'
     },
     'openai': {
