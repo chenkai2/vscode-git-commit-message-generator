@@ -201,6 +201,10 @@
         },
         "vscode-git-commit-message-generator.providers.deepseek.model": {
           "type": "string",
+          "enum": [
+            "deepseek-chat",
+            "deepseek-reasoner"
+          ],
           "default": "deepseek-chat",
           "description": "DeepSeek模型"
         },
@@ -216,7 +220,16 @@
         },
         "vscode-git-commit-message-generator.providers.anthropic.model": {
           "type": "string",
-          "default": "claude-3-haiku-20240307",
+          "enum": [
+            "claude-3-opus-20240229",
+            "claude-3-haiku-20240307",
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-7-sonnet-20250219",
+            "claude-opus-4-20250514",
+            "claude-sonnet-4-20250514"
+          ],
+          "default": "claude-sonnet-4-20250514",
           "description": "Anthropic模型"
         },
         "vscode-git-commit-message-generator.providers.anthropic.apiKey": {
