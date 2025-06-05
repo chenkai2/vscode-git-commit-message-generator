@@ -288,6 +288,16 @@
         },
         "vscode-git-commit-message-generator.providers.volcengine.model": {
           "type": "string",
+          "enum": [
+            "deepseek-v3-250324",
+            "deepseek-v3-241226",
+            "deepseek-r1-250120",
+            "deepseek-r1-distill-qwen-32b-250120",
+            "doubao-pro-32k-241215",
+            "doubao-1-5-pro-256k-250115",
+            "doubao-1-5-thinking-pro-m-250428",
+            "doubao-1-5-thinking-pro-250415"
+          ],
           "default": "deepseek-v3-250324",
           "description": "火山引擎模型"
         },
