@@ -1,7 +1,7 @@
 # Git Commit Message Generator
 
 <p align="center">
-  <img src="media/panda-avatar.png" alt="Git Commit Message Generator Logo" width="128" height="128">
+  <img src="https://raw.githubusercontent.com/chenkai2/vscode-git-commit-message-generator/refs/heads/main/media/panda-avatar.png" alt="Git Commit Message Generator Logo" width="128" height="128">
 </p>
 
 一个强大的Git提交信息生成器，基于AI模型自动分析暂存的代码变更并生成规范的commit message。
@@ -24,7 +24,7 @@
 ## 使用方法
 
 1. 在设置中配置AI服务的API相关信息
-   - 默认使用阿里云百炼的AI接口，模型为`deepseek-v3`
+   - 默认使用阿里云百炼的AI接口，模型为`deepseek-r1-distill-llama-70b`
      - 获取API密钥：[阿里云百炼](https://bailian.console.aliyun.com/?apiKey=1#/api-key)
      - 生成密钥后，可以直接使用各种模型，新用户半年内每种模型免费 100w tokens，可以用的模型有：
        - `deepseek-v3`
@@ -52,15 +52,12 @@
 
 在VSCode设置中，可以自定义以下配置：
 
-- `llm.url`: LLM API的URL地址
-- `llm.model`: 使用的AI模型
 - `llm.prompt`: 生成提交信息的提示词模板
 - `llm.system`: 系统指令
 - `llm.temperature`: 生成结果的随机性（0-1）
 - `llm.top_p`: 采样时的累积概率阈值（0-1）
-- `llm.apiKey`: API密钥
-- `llm.protocol`: API协议（ollama/openai）
 - `llm.max_tokens`: 生成结果的最大token数量
+- 各个服务商的不同的url、model、apiKey等参数配置
 
 ## 支持的LLM服务
 
@@ -72,7 +69,7 @@
 - 腾讯混元
 - DeepSeek
 - SiliconFlow
-- 其他兼容OpenAI接口的服务
+- 自定义其他兼容OpenAI接口的服务
 
 ## 贡献
 
