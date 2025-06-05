@@ -244,6 +244,20 @@
         },
         "vscode-git-commit-message-generator.providers.tencent.model": {
           "type": "string",
+          "enum": [
+            "hunyuan-embedding",
+            "hunyuan-pro",
+            "hunyuan-standard",
+            "hunyuan-lite",
+            "hunyuan-standard-256k",
+            "hunyuan-code",
+            "hunyuan-turbo",
+            "hunyuan-turbos-latest",
+            "hunyuan-large",
+            "hunyuan-t1-latest",
+            "hunyuan-t1-20250521",
+            "hunyuan-t1-20250403"
+          ],
           "default": "hunyuan-lite",
           "description": "腾讯混元模型"
         },
