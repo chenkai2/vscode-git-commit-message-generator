@@ -291,14 +291,16 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
     .replace(/\$\{files\}/g, stagedFiles.join('\n'))
     .replace(/\$\{diff\}/g, diffContent);
 
-  // 解析URL
-  const parsedUrl = url.parse(apiUrl);
+  // 解析URL（更健壮地处理用户自定义端点）
+  if (!apiUrl) {
+    console.warn(`[committer] llm apiUrl 为空，provider=${provider}，请检查扩展配置`);
+  }
+  const parsedUrl = url.parse(apiUrl || '');
   const isHttps = parsedUrl.protocol === 'https:';
-  const hostname = parsedUrl.hostname || 'localhost';
-  const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (isHttps ? 443 : 80);
+  const parsedHostname = parsedUrl.hostname || '';
 
-  // 获取匹配的服务配置
-  let serviceConfig = modelServices.find(service => service.hostname === hostname);
+  // 获取匹配的服务配置（先尝试用解析到的hostname查找）
+  let serviceConfig = modelServices.find(service => service.hostname === parsedHostname);
   if (!serviceConfig) {
     let serviceName = '';
     switch (protocol) {
@@ -313,10 +315,31 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
     serviceConfig = modelServices.find(service => service.name === serviceName);
   }
   if (!serviceConfig) {
-    throw new Error(`未找到匹配的LLM服务配置: ${hostname}`);
+    throw new Error(`未找到匹配的LLM服务配置: ${parsedHostname || apiUrl}`);
   }
 
-  const path = parsedUrl.pathname?.match(new RegExp(`${serviceConfig.apiSuffix}$`)) ? parsedUrl.pathname : `${parsedUrl.path}${serviceConfig.apiSuffix}`;
+  // 最终使用解析到的hostname，若为空则回退到serviceConfig中的hostname
+  const hostname = parsedHostname || serviceConfig.hostname || 'localhost';
+  const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (isHttps ? 443 : 80);
+
+  // 计算请求的 path，避免重复拼接或丢失斜杠
+  const basePath = parsedUrl.pathname || parsedUrl.path || '';
+  const suffix = serviceConfig.apiSuffix || '';
+  let path = basePath || '';
+  if (suffix) {
+    if (!path.endsWith(suffix)) {
+      // 处理斜杠，确保不会出现 // 或 缺少 /
+      if (path.endsWith('/') && suffix.startsWith('/')) {
+        path = path.slice(0, -1) + suffix;
+      } else if (!path.endsWith('/') && !suffix.startsWith('/')) {
+        path = path + '/' + suffix;
+      } else {
+        path = path + suffix;
+      }
+    }
+  }
+  if (!path) path = '/';
+  console.log(`[committer] resolved apiUrl=${apiUrl} host=${hostname} port=${port} path=${path}`);
   let requestData = {};
   switch (serviceConfig.name.toLowerCase()) {
     case "aliyun":
@@ -494,6 +517,7 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
             switch (serviceConfig.protocol) {
               case "openai":
                 if (response.choices){
+                  // 处理流式delta（已有逻辑）
                   if(response.choices[0]?.delta?.content) {
                     let content = response.choices[0].delta.content;
                     if (isThinking) {
@@ -535,6 +559,49 @@ async function callLLMAPI(stagedFiles: string[], diffContent: string, inputBox: 
                     generatedThinking += response.choices[0].delta.reasoning_content.replace(/\n/g, ' ');
                     statusBarMessage.text = generatedThinking;
                     statusBarMessage.show();
+                  }
+
+                  // 处理非流式（一次性）响应：OpenAI Chat Completions 或 Completions
+                  const choice = response.choices[0];
+                  if (choice) {
+                    // Chat completion: message.content 可能为字符串或对象（含 parts）
+                    let fullContent = '';
+                    if (choice.message && choice.message.content) {
+                      const mc = choice.message.content as any;
+                      if (typeof mc === 'string') {
+                        fullContent = mc;
+                      } else if (Array.isArray(mc.parts)) {
+                        fullContent = mc.parts.join('');
+                      } else {
+                        try {
+                          fullContent = JSON.stringify(mc);
+                        } catch (e) {
+                          fullContent = String(mc);
+                        }
+                      }
+                    } else if (choice.text) {
+                      // Completion API 返回的 text 字段
+                      fullContent = choice.text as string;
+                    }
+
+                    if (fullContent) {
+                      // 清理代码块并处理 <think> 标签（与流式逻辑保持一致）
+                      fullContent = fullContent.replace(/^```[a-z0-9]+\n/g, '').replace(/```/g, '');
+                      if (fullContent.match(/^<think>/)) {
+                        generatedThinking = fullContent.replace(/^<think>/, '');
+                        generatedText = '';
+                        isThinking = true;
+                      } else {
+                        generatedText += fullContent;
+                      }
+
+                      if (isThinking) {
+                        statusBarMessage.text = generatedThinking;
+                        statusBarMessage.show();
+                      } else {
+                        inputBox.value = generatedText;
+                      }
+                    }
                   }
                 }
                 break;
