@@ -303,7 +303,7 @@
         },
         "vscode-git-commit-message-generator.providers.siliconflow.model": {
           "type": "string",
-          "default": "deepseek-ai/DeepSeek-V3",
+          "default": "THUDM/glm-4-9b-chat",
           "description": "硅基流动模型"
         },
         "vscode-git-commit-message-generator.providers.siliconflow.apiKey": {
