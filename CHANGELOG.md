@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.1.6] - 2025-12-26
+
+### 优化
+- 支持非流式响应
+
+### 更新阿里云百炼模型列表
+
+- 删除了一些旧的模型名称
+- 新增多个限时免费模型名称，包括 deepseek-v3.2、glm-4.5、kimi-k2-thinking 等
+- 更新默认模型为 deepseek-v3.2
+- qwen-max、qwen-long、qwen-flash、qwq-plus、deepseek-r1不免费，请斟酌使用
+
+### 更新 OpenAI 模型列表
+
+- 添加了"gpt-5.2"、"gpt-5-mini"和"gpt-5-nano"模型。
+- 将默认模型更改为"gpt-5-mini"。
+
+### 更新 Anthropic 模型列表
+
+- Anthropic模型增加claude-sonnet-4-5、claude-haiku-4-5、claude-opus-4-5选项。
+- 将默认模型更改为"claude-sonnet-4-5"。
+
+### 更新腾讯混元模型列表
+
+- 腾讯混元模型增加hunyuan-2.0-thinking-20251109、hunyuan-2.0-instruct-20251111、hunyuan-a13b等模型
+- 将默认模型更改为"hunyuan-2.0-instruct-20251111"。
+
+### 更新硅基流动模型默认值
+
+- 将硅基流动模型的默认值更改为 "THUDM/glm-4-9b-chat"
+- 此模型免费
+
+### 更新火山引擎模型列表
+
+- 火山引擎模型增加：`deepseek-v3-2-251201`、`doubao-seed-1-8-251215`、`kimi-k2-thinking-251104` 等模型。
+- 将默认模型更改为"deepseek-v3-2-251201"。
+
 ## [0.1.5] -2025-06-20
 
 ### 优化
