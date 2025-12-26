@@ -337,7 +337,7 @@
             "doubao-1-5-thinking-pro-m-250428",
             "doubao-1-5-thinking-pro-250415"
           ],
-          "default": "deepseek-v3-250324",
+          "default": "deepseek-v3-2-251201",
           "description": "火山引擎模型"
         },
         "vscode-git-commit-message-generator.providers.volcengine.apiKey": {
