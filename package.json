@@ -2,7 +2,7 @@
   "name": "vscode-git-commit-message-generator",
   "displayName": "Git Commit Message Generator",
   "description": "一个强大的Git提交信息生成器，基于AI模型自动分析暂存的代码变更并生成规范的commit message。支持Ollama和OpenAI等多种LLM服务，可自定义提示词模板、温度参数等配置选项，让Git提交更加智能和高效。",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "chenkai2",
   "author": {
     "name": "chenkai2"
