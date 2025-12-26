@@ -7,7 +7,8 @@ const config = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
     libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../[resource-path]'
+    // Use webpack:/// scheme so VS Code can map source files reliably
+    devtoolModuleFilenameTemplate: 'webpack:///[resource-path]'
   },
   mode: 'development',
   devtool: 'source-map',
